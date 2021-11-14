@@ -20,7 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 from collections import deque
 import math
 from quoridor import *
-
+import time
 
 class MTCAgent(Agent):
 
@@ -50,7 +50,7 @@ class MTCAgent(Agent):
 
         # TODO: implement your agent and return an action for the current step.
         self.player = player
-        node = self.mtc_search(percepts, player, 50)
+        node = self.mtc_search(percepts, player, 10)
 
         return node.action
 
@@ -116,12 +116,15 @@ class MTCAgent(Agent):
         board = node.board.clone()
 
         count = 0
-        while not board.is_finished():
+        start = time.time()
+        end = time.time()
+        while not board.is_finished() and end - start < 5:
             count += 1
             move = board.get_shortest_path(1 - self.player)[0]
             action = self.choose_next_action(board, player) if player == self.player else ('P', move[0], move[1])
             board.play_action(action, player)
             player = PLAYER1 if node.player == PLAYER2 else PLAYER2
+            end = time.time()
 
         score = board.get_score(PLAYER1) - count
         node.score += score
@@ -141,7 +144,7 @@ class MTCAgent(Agent):
 
     def select_wall_actions(self, board, player):
         opponent = 1-player
-        # my_y, my_x = board.pawns[player]
+        opp_y, opp_x = board.pawns[opponent]
         # oppo_goal_y = board.goals[opponent]
         # wall_actions = board.get_legal_wall_moves(player)
         # wall_dict_wh = dict()
@@ -156,35 +159,20 @@ class MTCAgent(Agent):
         candidate_walls = []
     
         moves = board.get_shortest_path(opponent)
-        for move in moves[-1::]: 
-            action1 = ('WH', move[0], move[1])
-            action2 = ('WH', move[0], move[1] - 1)
+        for move in moves[::-1]: 
+            move_y, move_x = move[0], move[1]
+            actions = [('WH', move_y, move_x), ('WH', move_y, move_x - 1)]
 
-            if board.is_action_valid(action1, player):
-                candidate_walls.append(action1)
+            for (h_wall_y, h_wall_x) in board.horiz_walls:
+                if h_wall_y == move_y - 1 and h_wall_x in (move_x, move_x - 1):
+                    actions += [('WV', move_y, move_x), ('WV', move_y, move_x - 1), ('WV', move_y, move_x - 2)]
+
+            for action in actions:
+                if board.is_action_valid(action, player):
+                    candidate_walls.append(action)
             
-            if board.is_action_valid(action2, player):
-                candidate_walls.append(action2)
-        
-        # for move in moves: 
-        #     if move in wall_dict_wh:
-        #         candidate_walls.append((wall_dict_wh[move], move[0], move[1]))
+            
 
-        # if oppo_goal_y < oppo_y:
-        #     for wall_action in wall_actions:
-        #         wall_dir, wall_y, wall_x = wall_action
-        #         if wall_dir == 'WH' and wall_y == oppo_y - 1 and wall_x in (oppo_x, oppo_x - 1):
-        #             candidate_walls.append(wall_action)
-        #         if wall_dir == 'WV' and wall_y == oppo_y and wall_x in (oppo_x, oppo_x + 1):
-        #             candidate_walls.append(wall_action)
-        # else:
-        #     for wall_action in wall_actions:
-        #         wall_dir, wall_y, wall_x = wall_action
-        #         if wall_dir == 'WH' and wall_y == oppo_y - 1 and wall_x in (oppo_x, oppo_x - 1):
-        #             candidate_walls.append(wall_action)
-        #         if wall_dir == 'WV' and wall_y == oppo_y and wall_x in (oppo_x, oppo_x + 1):
-        #             candidate_walls.append(wall_action)
-        # print(candidate_walls)
         return candidate_walls
 
     def select_move_actions(self, board, player):
@@ -198,7 +186,7 @@ class MTCAgent(Agent):
         my_moves  = board.get_shortest_path(player)
         opp_moves = board.get_shortest_path(1 - player)
 
-        if len(my_moves) > len(opp_moves):
+        if random.random() <= 0.75 and len(my_moves) > len(opp_moves):
             wall_actions = self.select_wall_actions(board, player)
             if len(wall_actions) > 0:
                 choice = random.choice(wall_actions)
@@ -227,7 +215,7 @@ class MTCNode():
 
     def get_average_score(self):
         if self.visit > 0:
-            c = 0
+            c = 1
             explore =  c * math.sqrt(math.log(self.parent.visit) / self.visit) if self.hasParent() else 0
             return (self.score / self.visit) + explore
         return 0
