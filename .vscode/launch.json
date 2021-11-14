@@ -1,0 +1,40 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+        "name": "Run Game Bots",
+        "type": "python",
+        "request": "launch",
+        "program": "game.py",
+        "args": ["http://localhost:8000", "http://localhost:8080", "--time", "300"],
+        "console": "integratedTerminal"
+    },
+    {
+        "name": "Run Game Human",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/game.py",
+        "args": ["http://localhost:8000", "human", "--time", "300"],
+        "console": "integratedTerminal"
+    },
+    {
+      "name": "Run MTC",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/mtc_player.py",
+      "args": ["--bind", "localhost", "--port", "8000"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run Greedy",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/greedy_player.py",
+      "args": ["--bind", "localhost", "--port", "8080"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

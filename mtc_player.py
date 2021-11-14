@@ -49,7 +49,8 @@ class MTCAgent(Agent):
         # print("time left:", time_left if time_left else '+inf')
 
         # TODO: implement your agent and return an action for the current step.
-        node = self.mtc_search(percepts, player, 10)
+        self.player = player
+        node = self.mtc_search(percepts, player, 50)
 
         return node.action
 
@@ -93,7 +94,7 @@ class MTCAgent(Agent):
 
         clone_board = node.board.clone()
 
-        actions = self.select_move_actions(clone_board, node.player) + self.select_wall_actions(clone_board, node.player)
+        actions = self.select_wall_actions(clone_board, node.player) + self.select_move_actions(clone_board, node.player) 
         
         for action in actions:
             cloned = clone_board.clone()
@@ -114,14 +115,17 @@ class MTCAgent(Agent):
         player = node.player
         board = node.board.clone()
 
+        count = 0
         while not board.is_finished():
-            action = self.choose_next_action(board, player)
+            count += 1
+            move = board.get_shortest_path(1 - self.player)[0]
+            action = self.choose_next_action(board, player) if player == self.player else ('P', move[0], move[1])
             board.play_action(action, player)
             player = PLAYER1 if node.player == PLAYER2 else PLAYER2
 
-        score = board.get_score(PLAYER1)
+        score = board.get_score(PLAYER1) - count
         node.score += score
-        # print(score)
+        print(score)
         return score
     
     def backpropagate(self, score, child):
@@ -137,25 +141,34 @@ class MTCAgent(Agent):
 
     def select_wall_actions(self, board, player):
         opponent = 1-player
-        # oppo_y, oppo_x = board.pawns[opponent]
+        # my_y, my_x = board.pawns[player]
         # oppo_goal_y = board.goals[opponent]
-        wall_actions = board.get_legal_wall_moves(player)
-        wall_dict_wh = dict()
-        wall_dict_wv = dict()
+        # wall_actions = board.get_legal_wall_moves(player)
+        # wall_dict_wh = dict()
+        # wall_dict_wv = dict()
 
-        for wall_action in wall_actions:
-            if wall_action[0] == 'WH':
-                wall_dict_wh[wall_action[1], wall_action[2]] = wall_action[0] 
-            else:
-                wall_dict_wv[wall_action[1], wall_action[2]] = wall_action[0] 
+        # for wall_action in wall_actions:
+        #     if wall_action[0] == 'WH':
+        #         wall_dict_wh[wall_action[1], wall_action[2]] = wall_action 
+        #     else:
+        #         wall_dict_wv[wall_action[1], wall_action[2]] = wall_action
 
         candidate_walls = []
     
         moves = board.get_shortest_path(opponent)
+        for move in moves[-1::]: 
+            action1 = ('WH', move[0], move[1])
+            action2 = ('WH', move[0], move[1] - 1)
+
+            if board.is_action_valid(action1, player):
+                candidate_walls.append(action1)
+            
+            if board.is_action_valid(action2, player):
+                candidate_walls.append(action2)
         
-        for move in moves: 
-            if move in wall_dict_wh:
-                candidate_walls.append((wall_dict_wh[move], move[0], move[1]))
+        # for move in moves: 
+        #     if move in wall_dict_wh:
+        #         candidate_walls.append((wall_dict_wh[move], move[0], move[1]))
 
         # if oppo_goal_y < oppo_y:
         #     for wall_action in wall_actions:
