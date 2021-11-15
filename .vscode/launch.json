@@ -35,6 +35,14 @@
       "program": "${workspaceFolder}/greedy_player.py",
       "args": ["--bind", "localhost", "--port", "8080"],
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Run Short",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/short_player.py",
+      "args": ["--bind", "localhost", "--port", "8080"],
+      "console": "integratedTerminal"
     }
   ]
 }

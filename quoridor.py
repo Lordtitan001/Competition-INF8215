@@ -24,6 +24,7 @@ import operator
 PLAYER1 = 0
 PLAYER2 = 1
 
+import heapq
 
 class InvalidAction(Exception):
 
@@ -44,8 +45,8 @@ class NoPath(Exception):
 class Board:
 
     """
-    Representation of a Quoridor Board.
-
+    Representation of a Quoridor Board. Lot of function have been add to do some custom action.
+    e.g. get_shortest_path() using a A* search.
     """
 
     def __init__(self, percepts=None):
@@ -67,31 +68,32 @@ class Board:
         self.nb_walls = [self.starting_walls, self.starting_walls]
         self.horiz_walls = []
         self.verti_walls = []
+
         if percepts is not None:
-            self.pawns[0] = percepts.pawns[0]
-            self.goals[0] = percepts.goals[0]
-            self.pawns[1] = percepts.pawns[1]
-            self.goals[1] = percepts.goals[1]
-            for (x, y) in percepts.horiz_walls:
+            self.pawns[0] = percepts['pawns'][0]
+            self.goals[0] = percepts['goals'][0]
+            self.pawns[1] = percepts['pawns'][1]
+            self.goals[1] = percepts['goals'][1]
+            for (x, y) in percepts['horiz_walls']:
                 self.horiz_walls.append((x, y))
-            for (x, y) in percepts.verti_walls:
+            for (x, y) in percepts['verti_walls']:
                 self.verti_walls.append((x, y))
-            self.nb_walls[0] = percepts.nb_walls[0]
-            self.nb_walls[1] = percepts.nb_walls[1]
+            self.nb_walls[0] = percepts['nb_walls'][0]
+            self.nb_walls[1] = percepts['nb_walls'][1]
 
     def pretty_print(self):
         """print of the representation"""
-        print ("Player 0 => pawn:", self.pawns[0], "goal:",
-            self.goals[0], "nb walls:", self.nb_walls[0])
-        print ("Player 1 => pawn:", self.pawns[1], "goal:",
-            self.goals[1], "nb walls:", self.nb_walls[1])
-        print ("Horizontal walls:", self.horiz_walls)
-        print ("Vertical walls:", self.verti_walls)
+        print("Player 0 => pawn:", self.pawns[0], "goal:",
+              self.goals[0], "nb walls:", self.nb_walls[0])
+        print("Player 1 => pawn:", self.pawns[1], "goal:",
+              self.goals[1], "nb walls:", self.nb_walls[1])
+        print("Horizontal walls:", self.horiz_walls)
+        print("Vertical walls:", self.verti_walls)
 
     def __str__(self):
         """String representation of the board"""
         board_str = ""
-        for i in range(self.size):  
+        for i in range(self.size):
             for j in range(self.size):
                 if self.pawns[0][0] == i and self.pawns[0][1] == j:
                     board_str += "P1"
@@ -113,8 +115,8 @@ class Board:
                     board_str += "-- "
                 elif (i, j) in self.verti_walls:
                     board_str += "  |"
-                elif (i, j - 1) in self.horiz_walls and \
-                    (i, j) in self.verti_walls:
+                elif (i, j - 1) in self.horiz_walls and\
+                        (i, j) in self.verti_walls:
                     board_str += "--|"
                 else:
                     board_str += "   "
@@ -141,7 +143,7 @@ class Board:
         false otherwise
         """
         return self.is_pawn_move_ok(self.pawns[player], (i, j),
-            self.pawns[(player + 1) % 2])
+                                    self.pawns[(player + 1) % 2])
 
     def is_simplified_pawn_move_ok(self, former_pos, new_pos):
         """Returns True if moving one pawn from former_pos to new_pos
@@ -156,11 +158,11 @@ class Board:
             col_new >= self.size or col_new < 0:
             return False
         wall_right = ((row_form, col_form) in self.verti_walls) or \
-                    ((row_form - 1, col_form) in self.verti_walls)
+                     ((row_form - 1, col_form) in self.verti_walls)
         wall_left = ((row_form - 1, col_form - 1) in self.verti_walls) or \
                     ((row_form, col_form - 1) in self.verti_walls)
         wall_up = ((row_form - 1, col_form - 1) in self.horiz_walls) or \
-                    ((row_form - 1, col_form) in self.horiz_walls)
+                  ((row_form - 1, col_form) in self.horiz_walls)
         wall_down = ((row_form, col_form) in self.horiz_walls) or \
                     ((row_form, col_form - 1) in self.horiz_walls)
 
@@ -192,9 +194,9 @@ class Board:
             return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
         if manhattan(former_pos, opponent_pos) + \
-            manhattan(opponent_pos, new_pos) == 2:
+                manhattan(opponent_pos, new_pos) == 2:
             ok = self.is_pawn_move_ok(opponent_pos, new_pos, (-10, -10)) and \
-                self.is_pawn_move_ok(former_pos, opponent_pos, (-10, -10))
+                 self.is_pawn_move_ok(former_pos, opponent_pos, (-10, -10))
             if not ok:
                 return False
             # Check if the move is in straight angle that there were no
@@ -203,8 +205,9 @@ class Board:
                 # There is a possibility of moving straight ahead leading the
                 # move to be illegal
                 return not self.is_pawn_move_ok(opponent_pos,
-                    (x_op + (x_op - x_form), y_op + (y_op - y_form)),
-                    (-10, -10))
+                                                (x_op + (x_op - x_form),
+                                                 y_op + (y_op - y_form)),
+                                                (-10, -10))
             return True
         return self.is_simplified_pawn_move_ok(former_pos, new_pos)
 
@@ -223,19 +226,24 @@ class Board:
         """ Returns a shortest path for player to reach its goal
         if player is on its goal, the shortest path is an empty list
         if no path exists, exception is thrown.
+        This new implementation use A* search
         """
 
         def get_pawn_moves(pos):
             (x, y) = pos
             positions = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1),
-                (x + 1, y + 1), (x - 1, y - 1), (x + 1, y - 1), (x - 1, y + 1),
-                (x + 2, y), (x - 2, y), (x, y + 2), (x, y - 2)]
+                         (x + 1, y + 1), (x - 1, y - 1), (x + 1, y - 1),
+                         (x - 1, y + 1),
+                         (x + 2, y), (x - 2, y), (x, y + 2), (x, y - 2)]
             moves = []
             for new_pos in positions:
                 if self.is_pawn_move_ok(pos, new_pos,
-                    self.pawns[(player + 1) % 2]):
+                                        self.pawns[(player + 1) % 2]):
                     moves.append(new_pos)
             return moves
+
+        def heuristic(pos):
+            return abs(pos[0] - self.goals[player])
 
         (a, b) = self.pawns[player]
         if a == self.goals[player]:
@@ -243,9 +251,12 @@ class Board:
         visited = [[False for i in range(self.size)] for i in range(self.size)]
         # Predecessor matrix in the BFS
         prede = [[None for i in range(self.size)] for i in range(self.size)]
-        neighbors = [self.pawns[player]]
+        neighbors = []
+        heapq.heappush(neighbors,
+                       (heuristic(self.pawns[player]), (0, self.pawns[player])))
+
         while len(neighbors) > 0:
-            neighbor = neighbors.pop(0)
+            heuristic_distance, (distance, neighbor) = heapq.heappop(neighbors)
             (x, y) = neighbor
             visited[x][y] = True
             if x == self.goals[player]:
@@ -257,13 +268,16 @@ class Board:
                     curr = prede[x_][y_]
                 succ.reverse()
                 return succ
-            unvisited_succ = [(x_, y_) for (x_, y_) in
-                get_pawn_moves(neighbor) if not visited[x_][y_]]
+            unvisited_succ = [(x_, y_) for (x_, y_) in get_pawn_moves(neighbor)
+                              if not visited[x_][y_]]
             for n_ in unvisited_succ:
                 (x_, y_) = n_
-                if not n_ in neighbors:
-                    neighbors.append(n_)
-                    prede[x_][y_] = neighbor
+                if visited[x_][y_]:
+                    continue
+                new_distance = distance + 1
+                new_heuristic = new_distance + heuristic(n_)
+                heapq.heappush(neighbors, (new_heuristic, (new_distance, n_)))
+                prede[x_][y_] = neighbor
         raise NoPath()
 
     def min_steps_before_victory(self, player):
@@ -271,6 +285,31 @@ class Board:
         player to reach its goal raw.
         """
         return len(self.get_shortest_path(player))
+
+    def min_steps_before_victory_safe(self, player):
+        """Returns the minimum number of pawn moves necessary for the
+        player to reach its goal raw. Deal with the case where there
+        is no shortest past if the other player does not move.
+        Ref : https://inf8215-ia-a2021.slack.com/archives/C02FPE9D76K/p1634324106022600?thread_ts=1633832734.012800&cid=C02FPE9D76K
+        """
+        try:
+            return len(self.get_shortest_path(player))
+        except NoPath:
+            print("No path exception")
+            print(self)
+            temp = self.pawns[1 - player]
+            self.pawns[1 - player] = self.pawns[player]
+            shortest_path_length = len(self.get_shortest_path(player))
+            self.pawns[1 - player] = temp
+            return shortest_path_length
+
+    def add_wall_with_no_check(self, pos, is_horiz, player):
+        """Equivalent to add_wall. Except path existence test is performed"""
+        if is_horiz:
+            self.horiz_walls.append(pos)
+        else:
+            self.verti_walls.append(pos)
+        self.nb_walls[player] -= 1
 
     def add_wall(self, pos, is_horiz, player):
         """Player adds a wall in position pos. The wall is horizontal
@@ -328,16 +367,39 @@ class Board:
         else:
             return False
 
+    def is_simplified_wall_possible_here(self, pos, is_horiz):
+        """Similar to is_wall_possible_here() but does no path existence test"""
+        (x, y) = pos
+        if x >= self.size - 1 or x < 0 or y >= self.size - 1 or y < 0:
+            return False
+
+        if tuple(pos) in self.horiz_walls or tuple(pos) in self.verti_walls:
+            return False
+
+        if is_horiz:
+            wall_horiz_right = (x, y + 1) in self.horiz_walls
+            wall_horiz_left = (x, y - 1) in self.horiz_walls
+            if wall_horiz_right or wall_horiz_left:
+                return False
+        else:
+            wall_vert_up = (x - 1, y) in self.verti_walls
+            wall_vert_down = (x + 1, y) in self.verti_walls
+            if wall_vert_up or wall_vert_down:
+                return False
+
+        return True
+
     def get_legal_pawn_moves(self, player):
         """Returns legal moves for the pawn of player."""
         (x, y) = self.pawns[player]
         positions = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1),
-        (x + 1, y + 1), (x - 1, y - 1), (x + 1, y - 1), (x - 1, y + 1),
-        (x + 2, y), (x - 2, y), (x, y + 2), (x, y - 2)]
+                     (x + 1, y + 1), (x - 1, y - 1), (x + 1, y - 1),
+                     (x - 1, y + 1),
+                     (x + 2, y), (x - 2, y), (x, y + 2), (x, y - 2)]
         moves = []
         for new_pos in positions:
             if self.is_pawn_move_ok(self.pawns[player], new_pos,
-                self.pawns[(player + 1) % 2]):
+                                    self.pawns[(player + 1) % 2]):
                 moves.append(('P', new_pos[0], new_pos[1]))
         return moves
 
@@ -373,7 +435,7 @@ class Board:
         kind, i, j = action
         if kind == 'P':
             return self.is_pawn_move_ok(self.pawns[player], (i, j),
-                self.pawns[(player + 1) % 2])
+                                        self.pawns[(player + 1) % 2])
         elif kind == 'WH':
             wall_pos = self.is_wall_possible_here((i, j), True)
             return wall_pos
@@ -382,6 +444,16 @@ class Board:
             return wall_pos
         else:
             return False
+
+    def play_action_with_no_check(self, action, player: int):
+        """Similar to play_action() but does no path existence test"""
+        kind, x, y = action
+        if kind == 'WH':
+            self.add_wall_with_no_check((x, y), True, player)
+        elif kind == 'WV':
+            self.add_wall_with_no_check((x, y), False, player)
+        elif kind == 'P':
+            self.move_pawn((x, y), player)
 
     def play_action(self, action, player):
         """Play an action if it is valid.
@@ -428,7 +500,7 @@ class Board:
 
         """
         score = self.min_steps_before_victory((player + 1) % 2) - \
-                self.min_steps_before_victory(player)
+            self.min_steps_before_victory(player)
         if not score:
             score = self.nb_walls[player] - self.nb_walls[(player + 1) % 2]
         return score
