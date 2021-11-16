@@ -52,7 +52,7 @@ class MTCAgent(Agent):
         self.player = player
         self.step = step
         self.time_left = time_left
-        self.iteration = 200
+        self.iteration = 300
         node = self.mtc_search(percepts, player, self.iteration)
 
         return node.action
@@ -62,7 +62,7 @@ class MTCAgent(Agent):
         board = dict_to_board(percepts)
         node = MTCNode(score=0, visit=0, action=None, board=board, player=player, parent=None)
         start = time.time()
-        while limit > 0 and time.time() - start < 10:
+        while limit > 0 and time.time() - start < 15:
             leaf  = self.selection(node)
             child = self.expansion(leaf)
             score = self.simulation(child)
@@ -71,8 +71,6 @@ class MTCAgent(Agent):
     
 
         return node.get_most_visited_child()
-
-
 
 
     def selection(self, root):
@@ -145,11 +143,27 @@ class MTCAgent(Agent):
 
     
     def select_actions(self, board, player):
-        opp_moves = board.get_shortest_path(1 - player)
-        my_moves  = board.get_shortest_path(player)
+        try:
+            opp_moves = board.get_shortest_path(1 - player)
+            my_moves  = board.get_shortest_path(player)
 
-        return self.select_move_actions(board, player, opp_moves, my_moves) + \
-                self.select_wall_actions(board, player, opp_moves, my_moves)
+            return self.select_move_actions(board, player, opp_moves, my_moves) + \
+                    self.select_wall_actions(board, player, opp_moves, my_moves)
+        except NoPath:
+            print("No path exception")
+            temp = board.pawns[1 - player]
+            board.pawns[1 - player] = board.pawns[player]
+            my_moves = board.get_shortest_path(player)
+            board.pawns[1 - player] = temp
+            
+
+            temp = board.pawns[player]
+            board.pawns[player] = board.pawns[1 - player]
+            opp_moves = board.get_shortest_path(1 - player)
+            board.pawns[player] = temp
+
+            return self.select_move_actions(board, player, opp_moves, my_moves) + \
+                    self.select_wall_actions(board, player, opp_moves, my_moves)
 
 
     def select_wall_actions(self, board, player, opp_moves, my_moves):
@@ -166,35 +180,38 @@ class MTCAgent(Agent):
 
         actions = []
 
-        if oppo_goal_y < oppo_y:
+        if oppo_goal_y < oppo_y: # Opponent moving North
             actions += [('WH', oppo_y - 1, oppo_x), ('WH', oppo_y - 1, oppo_x - 1)]  
+            for (wall_y, wall_x) in board.horiz_walls:
+                actions += [('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x + 1),
+                            ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x + 1)]
 
-            if (oppo_y - 1, oppo_x) in board.horiz_walls:
+            # if (oppo_y - 1, oppo_x) in board.horiz_walls:
 
-                actions += [('WV', oppo_y, oppo_x + 1), ('WV', oppo_y, oppo_x - 1)] 
+            #     actions += [('WV', oppo_y, oppo_x + 1), ('WV', oppo_y, oppo_x - 1)] 
 
-                if (oppo_y, oppo_x + 1) in board.verti_walls:
-                    actions += [('WV', oppo_y - 2, oppo_x + 1), ('WH', oppo_y - 3, oppo_x), ('WH', oppo_y - 3, oppo_x - 1)] 
+            #     if (oppo_y, oppo_x + 1) in board.verti_walls:
+            #         actions += [('WV', oppo_y - 2, oppo_x + 1), ('WH', oppo_y - 3, oppo_x), ('WH', oppo_y - 3, oppo_x - 1)] 
                 
-                if (oppo_y, oppo_x - 1) in board.verti_walls:
-                    actions += [('WV', oppo_y - 2, oppo_x - 1), ('WH', oppo_y - 3, oppo_x), ('WH', oppo_y - 3, oppo_x - 1)] 
+            #     if (oppo_y, oppo_x - 1) in board.verti_walls:
+            #         actions += [('WV', oppo_y - 2, oppo_x - 1), ('WH', oppo_y - 3, oppo_x), ('WH', oppo_y - 3, oppo_x - 1)] 
 
-            if (oppo_y - 1, oppo_x - 1) in board.horiz_walls:
-                actions += [('WV', oppo_y, oppo_x), ('WV', oppo_y, oppo_x - 2)]  
+            # if (oppo_y - 1, oppo_x - 1) in board.horiz_walls:
+            #     actions += [('WV', oppo_y, oppo_x), ('WV', oppo_y, oppo_x - 2)]  
                 
-                if (oppo_y, oppo_x) in board.verti_walls:
-                    actions += [('WV', oppo_y - 2, oppo_x + 1), ('WH', oppo_y - 2, oppo_x), ('WH', oppo_y - 2, oppo_x - 1)] 
+            #     if (oppo_y, oppo_x) in board.verti_walls:
+            #         actions += [('WV', oppo_y - 2, oppo_x + 1), ('WH', oppo_y - 2, oppo_x), ('WH', oppo_y - 2, oppo_x - 1)] 
                 
-                if (oppo_y, oppo_x - 2) in board.verti_walls:
-                    actions += [('WV', oppo_y - 2, oppo_x - 1), ('WH', oppo_y - 2, oppo_x), ('WH', oppo_y - 2, oppo_x - 1)] 
+            #     if (oppo_y, oppo_x - 2) in board.verti_walls:
+            #         actions += [('WV', oppo_y - 2, oppo_x - 1), ('WH', oppo_y - 2, oppo_x), ('WH', oppo_y - 2, oppo_x - 1)] 
 
-        else: #TODO update for this side !!!
-            actions += [('WH', oppo_y, oppo_x), ('WH', oppo_y, oppo_x - 1)]  
-            if (oppo_y, oppo_x) in board.horiz_walls:
-                actions += [('WV', oppo_y, oppo_x + 1), ('WV', oppo_y, oppo_x - 1)]  
+        # else: #TODO update for this side !!!
+        #     actions += [('WH', oppo_y, oppo_x), ('WH', oppo_y, oppo_x - 1)]  
+        #     if (oppo_y, oppo_x) in board.horiz_walls:
+        #         actions += [('WV', oppo_y, oppo_x + 1), ('WV', oppo_y, oppo_x - 1)]  
 
-            if (oppo_y, oppo_x - 1) in board.horiz_walls:
-                actions += [('WV', oppo_y, oppo_x), ('WV', oppo_y, oppo_x - 2)]  
+        #     if (oppo_y, oppo_x - 1) in board.horiz_walls:
+        #         actions += [('WV', oppo_y, oppo_x), ('WV', oppo_y, oppo_x - 2)]  
 
         for action in actions:
             if board.is_action_valid(action, player):
