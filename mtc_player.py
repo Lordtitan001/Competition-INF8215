@@ -52,7 +52,7 @@ class MTCAgent(Agent):
         self.player = player
         self.step = step
         self.time_left = time_left
-        self.iteration = 300
+        self.iteration = 350
         node = self.mtc_search(percepts, player, self.iteration)
 
         return node.action
@@ -185,6 +185,7 @@ class MTCAgent(Agent):
             for (wall_y, wall_x) in board.horiz_walls:
                 actions += [('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x + 1),
                             ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x + 1)]
+        print ("actions \n", actions )
 
             # if (oppo_y - 1, oppo_x) in board.horiz_walls:
 
@@ -228,9 +229,12 @@ class MTCAgent(Agent):
         #     return [('P', move[0], move[1])]
         # else:
         #     return board.get_legal_pawn_moves(player)
+        # print ( "capable ", board.get_legal_pawn_moves(player) )
 
-        move = my_moves[0]
-        return [('P', move[0], move[1])]
+        return board.get_legal_pawn_moves(player)
+
+        # move = my_moves[0]
+        # return [('P', move[0], move[1])]
 
 
 class MTCNode():
