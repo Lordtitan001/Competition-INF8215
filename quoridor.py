@@ -222,6 +222,54 @@ class Board:
         except NoPath:
             return False
 
+    
+    def get_shortest_path_base(self, player):
+        """ Returns a shortest path for player to reach its goal
+        if player is on its goal, the shortest path is an empty list
+        if no path exists, exception is thrown.
+        """
+
+        def get_pawn_moves(pos):
+            (x, y) = pos
+            positions = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1),
+                (x + 1, y + 1), (x - 1, y - 1), (x + 1, y - 1), (x - 1, y + 1),
+                (x + 2, y), (x - 2, y), (x, y + 2), (x, y - 2)]
+            moves = []
+            for new_pos in positions:
+                if self.is_pawn_move_ok(pos, new_pos,
+                    self.pawns[(player + 1) % 2]):
+                    moves.append(new_pos)
+            return moves
+
+        (a, b) = self.pawns[player]
+        if a == self.goals[player]:
+            return []
+        visited = [[False for i in range(self.size)] for i in range(self.size)]
+        # Predecessor matrix in the BFS
+        prede = [[None for i in range(self.size)] for i in range(self.size)]
+        neighbors = [self.pawns[player]]
+        while len(neighbors) > 0:
+            neighbor = neighbors.pop(0)
+            (x, y) = neighbor
+            visited[x][y] = True
+            if x == self.goals[player]:
+                succ = [neighbor]
+                curr = prede[x][y]
+                while curr is not None and curr != self.pawns[player]:
+                    succ.append(curr)
+                    (x_, y_) = curr
+                    curr = prede[x_][y_]
+                succ.reverse()
+                return succ
+            unvisited_succ = [(x_, y_) for (x_, y_) in
+                get_pawn_moves(neighbor) if not visited[x_][y_]]
+            for n_ in unvisited_succ:
+                (x_, y_) = n_
+                if not n_ in neighbors:
+                    neighbors.append(n_)
+                    prede[x_][y_] = neighbor
+        raise NoPath()
+
     def get_shortest_path(self, player):
         """ Returns a shortest path for player to reach its goal
         if player is on its goal, the shortest path is an empty list
