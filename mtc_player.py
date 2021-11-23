@@ -55,9 +55,10 @@ class MTCAgent(Agent):
         self.step = step
         self.time_left = time_left
         self.iteration = 300
-        node = self.mtc_search(percepts, player, self.iteration)
 
+        node = self.mtc_search(percepts, player, self.iteration)
         return node.action
+
 
     def mtc_search(self, percepts, player, limit):
 
@@ -192,8 +193,12 @@ class MTCAgent(Agent):
                          1), ('WH', wall_y + 1, wall_x - 1),
                         ]
 
+        for move in opp_moves:
+            actions += [('WH', move[0], move[1]), ('WH', move[0], move[1] - 1)]
+
         if oppo_goal_y < oppo_y:  # Opponent moving North
-            actions += [('WH', oppo_y - 1, oppo_x), ('WH', oppo_y - 1, oppo_x - 1)]
+            actions += [('WH', oppo_y - 1, oppo_x),
+                        ('WH', oppo_y - 1, oppo_x - 1)]
 
         else:
             actions += [('WH', oppo_y, oppo_x), ('WH', oppo_y, oppo_x - 1)]
