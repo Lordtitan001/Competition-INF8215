@@ -66,7 +66,7 @@ class MTCAgent(Agent):
         node = MTCNode(score=0, visit=0, action=None,
                        board=board, player=player, parent=None)
         start = time.time()
-        while limit > 0 and time.time() - start < 15:
+        while limit > 0 and time.time() - start < 8:
             leaf = self.selection(node)
             child = self.expansion(leaf)
             score = self.simulation(child)
@@ -194,7 +194,8 @@ class MTCAgent(Agent):
                         ]
 
         for move in opp_moves:
-            actions += [('WH', move[0], move[1]), ('WH', move[0], move[1] - 1)]
+            actions += [('WH', move[0], move[1]), ('WH', move[0], move[1] - 1), 
+                        ('WV', move[0], move[1] - 1), ('WV', move[0] + 1, move[1] - 1)]
 
         if oppo_goal_y < oppo_y:  # Opponent moving North
             actions += [('WH', oppo_y - 1, oppo_x),
