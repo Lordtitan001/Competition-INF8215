@@ -22,6 +22,8 @@ import math
 from quoridor import *
 import time
 import sys
+
+
 class MTCAgent(Agent):
 
     """My Quoridor agent."""
@@ -60,18 +62,17 @@ class MTCAgent(Agent):
     def mtc_search(self, percepts, player, limit):
 
         board = dict_to_board(percepts)
-        node = MTCNode(score=0, visit=0, action=None, board=board, player=player, parent=None)
+        node = MTCNode(score=0, visit=0, action=None,
+                       board=board, player=player, parent=None)
         start = time.time()
         while limit > 0 and time.time() - start < 15:
-            leaf  = self.selection(node)
+            leaf = self.selection(node)
             child = self.expansion(leaf)
             score = self.simulation(child)
-            node  = self.backpropagate(score, child)
+            node = self.backpropagate(score, child)
             limit -= 1
-    
 
         return node.get_most_visited_child()
-
 
     def selection(self, root):
         if not root.hasChild():
@@ -81,7 +82,6 @@ class MTCAgent(Agent):
         while node.hasChild():
             selected_child = random.choice(node.children)
             maxS = selected_child.get_average_score()
-            
 
             for child in node.children:
                 if child.get_average_score() > maxS:
@@ -89,7 +89,7 @@ class MTCAgent(Agent):
                     selected_child = child
 
             node = selected_child
-        
+
         return node
 
     def expansion(self, node):
@@ -97,16 +97,17 @@ class MTCAgent(Agent):
             return node
 
         clone_board = node.board.clone()
-            
+
         if clone_board.is_finished():
             return node
 
         actions = self.select_actions(clone_board, node.player)
-                
+
         for action in actions:
             cloned = clone_board.clone()
             opponent = 1 - node.player
-            child = MTCNode(score=0, visit=0, action=action, board=cloned.play_action(action, node.player), player=opponent, parent=node)
+            child = MTCNode(score=0, visit=0, action=action, board=cloned.play_action(
+                action, node.player), player=opponent, parent=node)
             node.addChild(child)
 
         if not node.hasChild():
@@ -119,18 +120,18 @@ class MTCAgent(Agent):
         node.visit += 1
         player = node.player
         board = node.board.clone()
-        
+
         score = 0
 
         if 1 - player == self.player:
             player_steps = board.min_steps_before_victory_safe(self.player)
             oppo_steps = board.min_steps_before_victory_safe(1 - self.player)
-            
+
             score = oppo_steps - player_steps
 
         node.score += score
         return score
-    
+
     def backpropagate(self, score, child):
         node = child
         while node.hasParent():
@@ -141,21 +142,20 @@ class MTCAgent(Agent):
 
         return node
 
-    
     def select_actions(self, board, player):
         try:
             opp_moves = board.get_shortest_path(1 - player)
-            my_moves  = board.get_shortest_path(player)
+            my_moves = board.get_shortest_path(player)
 
             return self.select_move_actions(board, player, opp_moves, my_moves) + \
-                    self.select_wall_actions(board, player, opp_moves, my_moves)
+                self.select_wall_actions(
+                board, player, opp_moves, my_moves)
         except NoPath:
             print("No path exception")
             temp = board.pawns[1 - player]
             board.pawns[1 - player] = board.pawns[player]
             my_moves = board.get_shortest_path(player)
             board.pawns[1 - player] = temp
-            
 
             temp = board.pawns[player]
             board.pawns[player] = board.pawns[1 - player]
@@ -163,55 +163,40 @@ class MTCAgent(Agent):
             board.pawns[player] = temp
 
             return self.select_move_actions(board, player, opp_moves, my_moves) + \
-                    self.select_wall_actions(board, player, opp_moves, my_moves)
-
+                self.select_wall_actions(
+                board, player, opp_moves, my_moves)
 
     def select_wall_actions(self, board, player, opp_moves, my_moves):
-        opponent        = 1-player
-        oppo_y, oppo_x  = board.pawns[opponent]
-        oppo_goal_y     = board.goals[opponent]
+        opponent = 1-player
+        oppo_y, oppo_x = board.pawns[opponent]
+        oppo_goal_y = board.goals[opponent]
         candidate_walls = []
 
         if board.nb_walls[player] == 0:
             return []
 
-        if len(my_moves) < len(opp_moves): 
+        if len(my_moves) < len(opp_moves):
             return []
 
         actions = []
 
-        if oppo_goal_y < oppo_y: # Opponent moving North
-            actions += [('WH', oppo_y - 1, oppo_x), ('WH', oppo_y - 1, oppo_x - 1)]  
-            for (wall_y, wall_x) in board.horiz_walls:
-                actions += [('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x + 1),
-                            ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x + 1)]
+        for (wall_y, wall_x) in board.horiz_walls:
+            actions += [('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x - 1), ('WV', wall_y + 1, wall_x + 1),
+                        ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x - 1), ('WV', wall_y, wall_x + 1)]
 
-            # if (oppo_y - 1, oppo_x) in board.horiz_walls:
+        for (wall_y, wall_x) in board.verti_walls:
+            actions += [('WH', wall_y + 2, wall_x + 1), ('WH', wall_y + 2, wall_x - 1),
+                        ('WH', wall_y - 1, wall_x +
+                         1), ('WH', wall_y - 1, wall_x - 1),
+                        ('WH', wall_y + 1, wall_x +
+                         1), ('WH', wall_y + 1, wall_x - 1),
+                        ]
 
-            #     actions += [('WV', oppo_y, oppo_x + 1), ('WV', oppo_y, oppo_x - 1)] 
+        if oppo_goal_y < oppo_y:  # Opponent moving North
+            actions += [('WH', oppo_y - 1, oppo_x), ('WH', oppo_y - 1, oppo_x - 1)]
 
-            #     if (oppo_y, oppo_x + 1) in board.verti_walls:
-            #         actions += [('WV', oppo_y - 2, oppo_x + 1), ('WH', oppo_y - 3, oppo_x), ('WH', oppo_y - 3, oppo_x - 1)] 
-                
-            #     if (oppo_y, oppo_x - 1) in board.verti_walls:
-            #         actions += [('WV', oppo_y - 2, oppo_x - 1), ('WH', oppo_y - 3, oppo_x), ('WH', oppo_y - 3, oppo_x - 1)] 
-
-            # if (oppo_y - 1, oppo_x - 1) in board.horiz_walls:
-            #     actions += [('WV', oppo_y, oppo_x), ('WV', oppo_y, oppo_x - 2)]  
-                
-            #     if (oppo_y, oppo_x) in board.verti_walls:
-            #         actions += [('WV', oppo_y - 2, oppo_x + 1), ('WH', oppo_y - 2, oppo_x), ('WH', oppo_y - 2, oppo_x - 1)] 
-                
-            #     if (oppo_y, oppo_x - 2) in board.verti_walls:
-            #         actions += [('WV', oppo_y - 2, oppo_x - 1), ('WH', oppo_y - 2, oppo_x), ('WH', oppo_y - 2, oppo_x - 1)] 
-
-        # else: #TODO update for this side !!!
-        #     actions += [('WH', oppo_y, oppo_x), ('WH', oppo_y, oppo_x - 1)]  
-        #     if (oppo_y, oppo_x) in board.horiz_walls:
-        #         actions += [('WV', oppo_y, oppo_x + 1), ('WV', oppo_y, oppo_x - 1)]  
-
-        #     if (oppo_y, oppo_x - 1) in board.horiz_walls:
-        #         actions += [('WV', oppo_y, oppo_x), ('WV', oppo_y, oppo_x - 2)]  
+        else:
+            actions += [('WH', oppo_y, oppo_x), ('WH', oppo_y, oppo_x - 1)]
 
         for action in actions:
             if board.is_action_valid(action, player):
@@ -247,7 +232,9 @@ class MTCNode():
     def get_average_score(self):
         if self.visit > 0:
             c = math.sqrt(2)
-            explore =  c * math.sqrt(math.log(self.parent.visit) / self.visit) if self.hasParent() else 0
+            explore = c * \
+                math.sqrt(math.log(self.parent.visit) /
+                          self.visit) if self.hasParent() else 0
             return (self.score / self.visit) + explore
         return sys.maxsize
 
