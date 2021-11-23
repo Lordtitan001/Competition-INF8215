@@ -45,8 +45,7 @@ class NoPath(Exception):
 class Board:
 
     """
-    Representation of a Quoridor Board. Lot of function have been add to do some custom action.
-    e.g. get_shortest_path() using a A* search.
+    Representation of a Quoridor Board.
     """
 
     def __init__(self, percepts=None):
@@ -273,8 +272,7 @@ class Board:
     def get_shortest_path(self, player):
         """ Returns a shortest path for player to reach its goal
         if player is on its goal, the shortest path is an empty list
-        if no path exists, exception is thrown.
-        This new implementation use A* search
+        if no path exists, exception is thrown. This version use the A* search
         """
 
         def get_pawn_moves(pos):
@@ -297,7 +295,6 @@ class Board:
         if a == self.goals[player]:
             return []
         visited = [[False for i in range(self.size)] for i in range(self.size)]
-        # Predecessor matrix in the BFS
         prede = [[None for i in range(self.size)] for i in range(self.size)]
         neighbors = []
         heapq.heappush(neighbors,
@@ -316,8 +313,7 @@ class Board:
                     curr = prede[x_][y_]
                 succ.reverse()
                 return succ
-            unvisited_succ = [(x_, y_) for (x_, y_) in get_pawn_moves(neighbor)
-                              if not visited[x_][y_]]
+            unvisited_succ = [(x_, y_) for (x_, y_) in get_pawn_moves(neighbor) if not visited[x_][y_]]
             for n_ in unvisited_succ:
                 (x_, y_) = n_
                 if visited[x_][y_]:

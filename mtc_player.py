@@ -63,8 +63,7 @@ class MTCAgent(Agent):
     def mtc_search(self, percepts, player, limit):
 
         board = dict_to_board(percepts)
-        node = MTCNode(score=0, visit=0, action=None,
-                       board=board, player=player, parent=None)
+        node = MTCNode(score=0, visit=0, action=None, board=board, player=player, parent=None)
         start = time.time()
         while limit > 0 and time.time() - start < 8:
             leaf = self.selection(node)
